@@ -1,4 +1,13 @@
-import { Box, Container, Grid, Paper } from "@mui/material";
+import {
+  Box,
+  Container,
+  Grid,
+  InputAdornment,
+  Paper,
+  Stack,
+  Avatar,
+  Link,
+} from "@mui/material";
 import React from "react";
 import Stepper from "@mui/material/Stepper";
 import Step from "@mui/material/Step";
@@ -10,7 +19,9 @@ import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import Textfield from "./FormsComponent/TextField";
 import Button from "./FormsComponent/Button";
-
+import DoneIcon from "@mui/icons-material/Done";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import Checkbox from "./FormsComponent/Checkbox";
 const steps = [
   {
     label: "Company Information",
@@ -49,11 +60,23 @@ const INITIAL_FORM_STATE = {
   email: "",
   repeatEmail: "",
   phone: "",
-  //   termsOfService: false,
+  c1: false,
+  c2: false,
+  c3: false,
+  termsOfService: false,
 };
+const phoneRegExp =
+  /^((\\+[1-9]{1,4}[ \\-]*)|(\\([0-9]{2,3}\\)[ \\-]*)|([0-9]{2,4})[ \\-]*)*?[0-9]{3,4}?[ \\-]*[0-9]{3,4}?$/;
 
 const FORM_VALIDATION = Yup.object().shape({
-  companyUEN: Yup.string().required("Company UEN is required"),
+  companyUEN: Yup.string()
+    .required("Company UEN is required")
+    .min(8, "Invalid Company UEN")
+    .matches(
+      /(?<!x)(?<!\border\s*number\W*)(?=(?:[._ –-]*\d){7})(?!7|66\D*6|00\D*0|(?:\d\D*){3}0\D*0|(?:\d\D*){5}0(?:\D*0){6})\d(?:[._ –-]*\d){6}/gi,
+      "Invalid Company UEN WWW"
+    )
+    .matches(/[A-Z]$/, "Invalid Company UEN"),
   companyName: Yup.string()
     .required("Company Name is required")
     .min(2, "Minimum 2 characters required"),
@@ -61,13 +84,23 @@ const FORM_VALIDATION = Yup.object().shape({
   designation: Yup.string().required("Required"),
   email: Yup.string().email("Invalid email.").required("Required"),
   repeatEmail: Yup.string().email("Invalid email.").required("Required"),
-  phone: Yup.number()
-    .integer()
-    .typeError("Please enter a valid phone number")
-    .required("Required"),
-  //   termsOfService: Yup.boolean()
-  //     .oneOf([true], "The terms and conditions must be accepted.")
-  //     .required("The terms and conditions must be accepted."),
+  phone: Yup.string()
+    .required("Enter a 8-digit Mobile Number")
+    .matches(phoneRegExp, "Mobile number is not valid")
+    .min(8, "Enter a 8-digit Mobile Number")
+    .max(8, "Enter a 8-digit Mobile Number"),
+  c1: Yup.boolean()
+    .oneOf([true], "The terms and conditions must be accepted.")
+    .required("The terms and conditions must be accepted."),
+  c2: Yup.boolean()
+    .oneOf([true], "The terms and conditions must be accepted.")
+    .required("The terms and conditions must be accepted."),
+  c3: Yup.boolean()
+    .oneOf([true], "The terms and conditions must be accepted.")
+    .required("The terms and conditions must be accepted."),
+  termsOfService: Yup.boolean()
+    .oneOf([true], "The terms and conditions must be accepted.")
+    .required("The terms and conditions must be accepted."),
 });
 export const Body = () => {
   const classes = useStyles();
@@ -80,7 +113,6 @@ export const Body = () => {
     <Box
       sx={{
         backgroundColor: "rgb(245, 248, 250)",
-        // height: "calc(100vh - 142px)",
       }}
     >
       <Container>
@@ -91,7 +123,6 @@ export const Body = () => {
             pb: 6,
             pl: 4,
             pr: 4,
-            // height: "calc(70vh)",
           }}
         >
           <Box
@@ -109,7 +140,15 @@ export const Body = () => {
               {(formik) => {
                 const {
                   errors,
-                  values: { companyName = "", companyUEN = "" },
+                  values: {
+                    companyName = "",
+                    companyUEN = "",
+                    fullName = "",
+                    email = "",
+                    designation = "",
+                    repeatEmail = "",
+                    phone = "",
+                  },
                 } = formik;
 
                 return (
@@ -118,11 +157,24 @@ export const Body = () => {
                       className={classes.root}
                       activeStep={
                         !(
-                          errors?.companyUEN ||
-                          errors?.companyName ||
-                          !companyName ||
-                          !companyUEN
+                          errors?.fullName ||
+                          errors?.email ||
+                          errors?.designation ||
+                          errors?.repeatEmail ||
+                          errors?.phone ||
+                          !fullName ||
+                          !designation ||
+                          !repeatEmail ||
+                          !phone ||
+                          !email
                         )
+                          ? 2
+                          : !(
+                              errors?.companyUEN ||
+                              errors?.companyName ||
+                              !companyName ||
+                              !companyUEN
+                            )
                           ? 1
                           : 0
                       }
@@ -224,6 +276,13 @@ export const Body = () => {
                                     <Textfield
                                       name="phone"
                                       label="Mobile Number"
+                                      InputProps={{
+                                        startAdornment: (
+                                          <InputAdornment position="start">
+                                            +65
+                                          </InputAdornment>
+                                        ),
+                                      }}
                                       disabled={
                                         errors?.companyUEN ||
                                         errors?.companyName ||
@@ -236,55 +295,226 @@ export const Body = () => {
                               </Box>
                             ) : step.level === 2 ? (
                               <Box sx={{ mb: 3, mt: 3 }}>
-                                <Grid container spacing={2} sx={{ pl: 1 }}>
-                                  <Grid item xs={12} md={6}>
-                                    upload docs
-                                  </Grid>
-                                </Grid>
+                                <Stack
+                                  direction={{ xs: "column", md: "row" }}
+                                  spacing={{ xs: 2, sm: 2, md: 4 }}
+                                  sx={{ width: "100%" }}
+                                >
+                                  <Stack
+                                    direction={"column"}
+                                    spacing={1}
+                                    justifyContent="flex-start"
+                                    alignItems={"center"}
+                                    sx={{
+                                      padding: " 40px 24px",
+                                      borderRadius: "4px",
+                                      border: "1px dashed rgba(0, 0, 0, 0.118)",
+                                      backgroundColor: "rgb(250, 250, 250)",
+                                      color: "rgb(189, 189, 189)",
+                                      pointerEvents: "none",
+                                      width: "50%",
+                                      height: "fit-content",
+                                    }}
+                                  >
+                                    <Avatar
+                                      sx={{
+                                        backgroundColor: "rgba(0, 0, 84, 0.12)",
+                                        p: "3px",
+                                      }}
+                                    >
+                                      <PictureAsPdfIcon
+                                        size="small"
+                                        sx={{
+                                          color: "rgb(189, 189, 189)",
+                                        }}
+                                      />
+                                    </Avatar>
+                                    <Typography
+                                      component={"p"}
+                                      variant="subtitle1"
+                                      align="start"
+                                      gutterBottom
+                                    >
+                                      <span
+                                        style={{
+                                          borderBottom:
+                                            "1px solid rgb(189, 189, 189)",
+                                        }}
+                                      >
+                                        Click to upload
+                                      </span>
+                                      &nbsp; or drag and drop Bank Statements
+                                    </Typography>
+                                  </Stack>
+                                  <Stack
+                                    direction={"column"}
+                                    spacing={2}
+                                    justifyContent="flex-start"
+                                    alignItems={"flex-start"}
+                                    sx={{
+                                      color: "rgba(0, 0, 0, 0.6)",
+                                      width: "50%",
+                                    }}
+                                  >
+                                    <Stack direction={"row"} spacing={2}>
+                                      <DoneIcon size="large" />
+                                      <Typography
+                                        component={"p"}
+                                        variant="subtitle1"
+                                        align="start"
+                                      >
+                                        PDFs (not scanned copies) of company's
+                                        operating bank current account(s)
+                                        statements for the past 6 months.
+                                        Example: If today is 29 Nov 22, then
+                                        please upload bank statements from May
+                                        22 to Oct 22 (both months inclusive)
+                                      </Typography>
+                                    </Stack>
+                                    <Stack direction={"row"} spacing={2}>
+                                      <DoneIcon size="large" />
+                                      <Typography
+                                        component={"p"}
+                                        variant="subtitle1"
+                                        align="start"
+                                      >
+                                        If your company is multi-banked, then
+                                        please upload 6 months bank statements
+                                        for each bank account
+                                      </Typography>
+                                    </Stack>
+                                    <Stack direction={"row"} spacing={2}>
+                                      <DoneIcon size="large" />
+                                      <Typography
+                                        component={"p"}
+                                        variant="subtitle1"
+                                        align="start"
+                                      >
+                                        If your file is password protected, we
+                                        request you to remove the password and
+                                        upload the file to avoid submission
+                                        failure
+                                      </Typography>
+                                    </Stack>
+                                    <Stack direction={"row"} spacing={2}>
+                                      <DoneIcon size="large" />
+                                      <Typography
+                                        component={"p"}
+                                        variant="subtitle1"
+                                        align="start"
+                                      >
+                                        In case if you are facing any issue
+                                        while uploading bank statements, Please
+                                        contact us on&nbsp;
+                                        <Link
+                                          href="mailto:support@credilinq.ai "
+                                          underline="none"
+                                          target="_blank"
+                                          sx={{ color: "rgb(96, 26, 121)" }}
+                                        >
+                                          support@credilinq.ai
+                                        </Link>
+                                      </Typography>
+                                    </Stack>
+                                  </Stack>
+                                </Stack>
                               </Box>
                             ) : (
                               <Box sx={{ mb: 3, mt: 3 }}>
-                                <Grid container spacing={2} sx={{ pl: 1 }}>
-                                  <Grid item xs={12} md={6}>
-                                    Last Element
-                                  </Grid>
-                                </Grid>
+                                <Stack
+                                  direction={"column"}
+                                  spacing={1}
+                                  justifyContent="flex-start"
+                                  alignItems={"flex-start"}
+                                  sx={{
+                                    color: "rgba(0, 0, 0, 0.38)",
+                                  }}
+                                >
+                                  <Checkbox
+                                    name="c1"
+                                    label={
+                                      <Typography
+                                        variant="subtitle1"
+                                        align="start"
+                                      >
+                                        I confirm that I am the authorized
+                                        person to upload bank statements on
+                                        behalf of my company
+                                      </Typography>
+                                    }
+                                  />
+                                  <Checkbox
+                                    name="c2"
+                                    label={
+                                      <Typography
+                                        variant="subtitle1"
+                                        align="start"
+                                      >
+                                        I assure that uploaded bank statements
+                                        and provided company information matches
+                                        and are of same company, if there is a
+                                        mismatch then my report will not be
+                                        generated
+                                      </Typography>
+                                    }
+                                  />
+                                  <Checkbox
+                                    name="c3"
+                                    label={
+                                      <Typography
+                                        variant="subtitle1"
+                                        align="start"
+                                      >
+                                        I understand that this is a general
+                                        report based on the bank statement and
+                                        Credilinq is not providing a solution or
+                                        guiding me for my business growth
+                                      </Typography>
+                                    }
+                                  />
+                                  <Checkbox
+                                    name="termsOfService"
+                                    label={
+                                      <Typography
+                                        variant="subtitle1"
+                                        align="start"
+                                      >
+                                        I duly accept the&nbsp;
+                                        <Link
+                                          href="https://stage-smehealth.credilinq.ai/terms-and-conditions"
+                                          underline="none"
+                                          sx={{ color: "rgb(96, 26, 121)" }}
+                                        >
+                                          Terms & Conditions
+                                        </Link>
+                                      </Typography>
+                                    }
+                                  />
+                                </Stack>
                               </Box>
                             )}
                           </StepContent>
                         </Step>
                       ))}
                     </Stepper>
-                    <Grid container spacing={2} justifyContent="right">
-                      {/* <Grid item xs={12}>
-                        <Checkbox
-                          name="termsOfService"
-                          legend="Terms Of Service"
-                          label="I confirm that I am the authorized person to upload bank statements on behalf of my company"
-                        />
-                      </Grid> */}
-
-                      <Grid item xs={1}>
-                        <Button disabled={!formik.isValid} variant="contained">
-                          Submit
-                        </Button>
-                      </Grid>
-                    </Grid>
+                    <Stack
+                      direction={"row"}
+                      container
+                      spacing={2}
+                      justifyContent="right"
+                    >
+                      <Button
+                        disabled={!formik.isValid}
+                        sx={{ maxWidth: "100px" }}
+                        variant="contained"
+                      >
+                        Submit
+                      </Button>
+                    </Stack>
                   </Form>
                 );
               }}
             </Formik>
-
-            {/* {activeStep === steps.length && (
-              <Paper square elevation={0} sx={{ p: 3 }}>
-                <Typography>
-                  All steps completed - you&apos;re finished
-                </Typography>
-                <Button onClick={handleReset} sx={{ mt: 1, mr: 1 }}>
-                  Reset
-                </Button>
-              </Paper>
-            )} */}
           </Box>
         </Paper>
       </Container>
