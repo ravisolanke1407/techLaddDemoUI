@@ -114,6 +114,41 @@ export const Body = () => {
     console.log("Form data", values);
   };
 
+  const activeStepCondition = (errors, values) => {
+    const {
+      companyName = "",
+      companyUEN = "",
+      fullName = "",
+      email = "",
+      designation = "",
+      repeatEmail = "",
+      phone = "",
+    } = values;
+    const activeStage = !(
+      errors?.fullName ||
+      errors?.email ||
+      errors?.designation ||
+      errors?.repeatEmail ||
+      errors?.phone ||
+      !fullName ||
+      !designation ||
+      !repeatEmail ||
+      !phone ||
+      !email
+    )
+      ? 2
+      : !(
+          errors?.companyUEN ||
+          errors?.companyName ||
+          !companyName ||
+          !companyUEN
+        )
+      ? 1
+      : 0;
+
+    return activeStage;
+  };
+
   return (
     <Box
       sx={{
@@ -143,46 +178,13 @@ export const Body = () => {
               onSubmit={onSubmit}
             >
               {(formik) => {
-                const {
-                  errors,
-                  values: {
-                    companyName = "",
-                    companyUEN = "",
-                    fullName = "",
-                    email = "",
-                    designation = "",
-                    repeatEmail = "",
-                    phone = "",
-                  },
-                } = formik;
-
+                const { errors, values } = formik;
+                const { companyName = "", companyUEN = "" } = values;
                 return (
                   <Form>
                     <Stepper
                       className={classes.root}
-                      activeStep={
-                        !(
-                          errors?.fullName ||
-                          errors?.email ||
-                          errors?.designation ||
-                          errors?.repeatEmail ||
-                          errors?.phone ||
-                          !fullName ||
-                          !designation ||
-                          !repeatEmail ||
-                          !phone ||
-                          !email
-                        )
-                          ? 2
-                          : !(
-                              errors?.companyUEN ||
-                              errors?.companyName ||
-                              !companyName ||
-                              !companyUEN
-                            )
-                          ? 1
-                          : 0
-                      }
+                      activeStep={activeStepCondition(errors, values)}
                       orientation="vertical"
                     >
                       {steps.map((step) => (
@@ -303,7 +305,7 @@ export const Body = () => {
                               <Box sx={{ mb: 3, mt: 3 }}>
                                 <Stack
                                   direction={{ xs: "column", md: "row" }}
-                                  spacing={{ xs: 2, sm: 2, md: 4 }}
+                                  spacing={{ xs: 1, sm: 2, md: 4 }}
                                   sx={{ width: "100%" }}
                                 >
                                   <Stack
@@ -490,6 +492,7 @@ export const Body = () => {
                                           href="https://stage-smehealth.credilinq.ai/terms-and-conditions"
                                           underline="none"
                                           sx={{ color: "rgb(96, 26, 121)" }}
+                                          target="_blank"
                                         >
                                           Terms & Conditions
                                         </Link>
