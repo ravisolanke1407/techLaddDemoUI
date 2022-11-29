@@ -80,12 +80,17 @@ const FORM_VALIDATION = Yup.object().shape({
   companyName: Yup.string()
     .required("Company Name is required")
     .min(2, "Minimum 2 characters required"),
-  fullName: Yup.string().required("Required"),
-  designation: Yup.string().required("Required"),
-  email: Yup.string().email("Invalid email.").required("Required"),
-  repeatEmail: Yup.string().email("Invalid email.").required("Required"),
+  fullName: Yup.string().required("Fullname is required"),
+  designation: Yup.string().required("Position is required"),
+  email: Yup.string()
+    .email("Enter a valid email.")
+    .required("Email is required"),
+  repeatEmail: Yup.string()
+    .email("Enter a valid email")
+    .required("Email is required")
+    .oneOf([Yup.ref("email"), null], "Email does not match"),
   phone: Yup.string()
-    .required("Enter a 8-digit Mobile Number")
+    .required("Mobile number is required")
     .matches(phoneRegExp, "Mobile number is not valid")
     .min(8, "Enter a 8-digit Mobile Number")
     .max(8, "Enter a 8-digit Mobile Number"),
@@ -256,6 +261,7 @@ export const Body = () => {
                                         !companyName ||
                                         !companyUEN
                                       }
+                                      helperText="The report will be delivered on this email address"
                                     />
                                   </Grid>
 
