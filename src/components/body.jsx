@@ -1,27 +1,26 @@
 import {
   Box,
   Container,
-  Grid,
-  InputAdornment,
   Paper,
   Stack,
-  Avatar,
-  Link,
+  Stepper,
+  Step,
+  StepLabel,
+  Typography,
+  StepContent,
 } from "@mui/material";
-import React from "react";
-import Stepper from "@mui/material/Stepper";
-import Step from "@mui/material/Step";
-import StepLabel from "@mui/material/StepLabel";
-import Typography from "@mui/material/Typography";
-import StepContent from "@mui/material/StepContent";
+import React, { useCallback, useState } from "react";
 import { makeStyles } from "@mui/styles";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
-import Textfield from "./FormsComponent/TextField";
 import Button from "./FormsComponent/Button";
-import DoneIcon from "@mui/icons-material/Done";
-import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
-import Checkbox from "./FormsComponent/Checkbox";
+import Step1 from "./steps/Step1";
+import Step2 from "./steps/Step2";
+import Step3 from "./steps/Step3";
+import Step4 from "./steps/Step4";
+import { createFormAPI } from "../api/createForm";
+import Loader from "./loader";
+import Toast from "./toast";
 const steps = [
   {
     label: "Company Information",
@@ -50,8 +49,14 @@ const useStyles = makeStyles(() => ({
       color: "green !important",
     },
   },
+  paperPD: {
+    padding: "48px 32px",
+  },
+  boxBG: {
+    backgroundColor: "rgb(245, 248, 250)",
+  },
 }));
-
+/**INITIAL STATE */
 const INITIAL_FORM_STATE = {
   companyUEN: "",
   companyName: "",
@@ -65,9 +70,12 @@ const INITIAL_FORM_STATE = {
   c3: false,
   termsOfService: false,
 };
+/**Phone Regex */
+
 const phoneRegExp =
   /^((\\+[1-9]{1,4}[ \\-]*)|(\\([0-9]{2,3}\\)[ \\-]*)|([0-9]{2,4})[ \\-]*)*?[0-9]{3,4}?[ \\-]*[0-9]{3,4}?$/;
 
+/**FORM VALIDATION */
 const FORM_VALIDATION = Yup.object().shape({
   companyUEN: Yup.string()
     .required("Company UEN is required")
@@ -107,13 +115,15 @@ const FORM_VALIDATION = Yup.object().shape({
     .oneOf([true], "The terms and conditions must be accepted.")
     .required("The terms and conditions must be accepted."),
 });
+
+/**COMPONENT */
 export const Body = () => {
   const classes = useStyles();
+  const [selectedPDF, setSelectedPDF] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [openToast, setOpenToast] = React.useState(false);
 
-  const onSubmit = (values) => {
-    console.log("Form data", values);
-  };
-
+  /**FUNCTION TO CHECK ACTIVE STEP */
   const activeStepCondition = (errors, values) => {
     const {
       companyName = "",
@@ -123,48 +133,109 @@ export const Body = () => {
       designation = "",
       repeatEmail = "",
       phone = "",
+      c1,
+      c2,
+      c3,
+      termsOfService,
     } = values;
-    const activeStage = !(
-      errors?.fullName ||
-      errors?.email ||
-      errors?.designation ||
-      errors?.repeatEmail ||
-      errors?.phone ||
-      !fullName ||
-      !designation ||
-      !repeatEmail ||
-      !phone ||
-      !email
-    )
-      ? 2
-      : !(
-          errors?.companyUEN ||
-          errors?.companyName ||
-          !companyName ||
-          !companyUEN
-        )
-      ? 1
-      : 0;
+    const activeStage =
+      c1 &&
+      c2 &&
+      c3 &&
+      termsOfService &&
+      selectedPDF &&
+      !(
+        errors?.fullName ||
+        errors?.email ||
+        errors?.designation ||
+        errors?.repeatEmail ||
+        errors?.phone ||
+        !fullName ||
+        !designation ||
+        !repeatEmail ||
+        !phone ||
+        !email
+      )
+        ? 4
+        : selectedPDF &&
+          !(
+            errors?.fullName ||
+            errors?.email ||
+            errors?.designation ||
+            errors?.repeatEmail ||
+            errors?.phone ||
+            !fullName ||
+            !designation ||
+            !repeatEmail ||
+            !phone ||
+            !email
+          )
+        ? 3
+        : !(
+            errors?.fullName ||
+            errors?.email ||
+            errors?.designation ||
+            errors?.repeatEmail ||
+            errors?.phone ||
+            !fullName ||
+            !designation ||
+            !repeatEmail ||
+            !phone ||
+            !email
+          )
+        ? 2
+        : !(
+            errors?.companyUEN ||
+            errors?.companyName ||
+            !companyName ||
+            !companyUEN
+          )
+        ? 1
+        : 0;
 
     return activeStage;
   };
+  const onSubmit = async (values, { resetForm }) => {
+    setIsLoading(true);
+    const formData = new FormData();
+    formData.append("pdfDoc", selectedPDF);
+    formData.append("values", JSON.stringify(values));
+    try {
+      await createFormAPI(formData);
+
+      setSelectedPDF(null);
+      setIsLoading(false);
+      resetForm({ values: INITIAL_FORM_STATE });
+      setOpenToast(true);
+    } catch (err) {
+      console.log(err);
+      setIsLoading(false);
+    }
+  };
+  const handleSelectedPDF = useCallback((e) => {
+    e.preventDefault();
+    const file = e.target.files[0];
+    setSelectedPDF(file);
+  }, []);
+
+  const handleClose = useCallback((event, reason) => {
+    if (reason === "clickaway") {
+      return;
+    }
+
+    setOpenToast(false);
+  }, []);
 
   return (
-    <Box
-      sx={{
-        backgroundColor: "rgb(245, 248, 250)",
-      }}
-    >
+    <Box className={classes.boxBG}>
       <Container>
-        <Paper
-          elevation={3}
-          sx={{
-            pt: 6,
-            pb: 6,
-            pl: 4,
-            pr: 4,
-          }}
-        >
+        <Loader isLoading={isLoading} />
+        <Toast
+          handleClose={handleClose}
+          open={openToast}
+          message="Form has submitted successfully!"
+        />
+        <Paper elevation={3} className={classes.paperPD}>
           <Box
             sx={{
               "& .MuiTextField-root": { color: "#000" },
@@ -179,7 +250,7 @@ export const Body = () => {
             >
               {(formik) => {
                 const { errors, values } = formik;
-                const { companyName = "", companyUEN = "" } = values;
+
                 return (
                   <Form>
                     <Stepper
@@ -207,300 +278,19 @@ export const Body = () => {
                           </StepLabel>
                           <StepContent TransitionProps={{ in: true }}>
                             {step.level === 0 ? (
-                              <Box sx={{ mb: 3, mt: 3 }}>
-                                <Grid container spacing={3} sx={{ pl: 1 }}>
-                                  <Grid item xs={12} md={6}>
-                                    <Textfield
-                                      name="companyUEN"
-                                      label="Company UEN"
-                                      placeholder="Enter your company UEN"
-                                    />
-                                  </Grid>
-                                  <Grid item xs={12} md={6}>
-                                    <Textfield
-                                      name="companyName"
-                                      label="Company Name"
-                                      placeholder="Enter your company name"
-                                    />
-                                  </Grid>
-                                </Grid>
-                              </Box>
+                              <Step1 />
                             ) : step.level === 1 ? (
-                              <Box sx={{ mb: 3, mt: 3 }}>
-                                <Grid container spacing={3} sx={{ pl: 1 }}>
-                                  <Grid item xs={12} md={6}>
-                                    <Textfield
-                                      name="fullName"
-                                      label="Full Name"
-                                      disabled={
-                                        errors?.companyUEN ||
-                                        errors?.companyName ||
-                                        !companyName ||
-                                        !companyUEN
-                                      }
-                                    />
-                                  </Grid>
-                                  <Grid item xs={12} md={6}>
-                                    <Textfield
-                                      name="designation"
-                                      label="Position within company"
-                                      disabled={
-                                        errors?.companyUEN ||
-                                        errors?.companyName ||
-                                        !companyName ||
-                                        !companyUEN
-                                      }
-                                    />
-                                  </Grid>
-
-                                  <Grid item xs={12} md={6}>
-                                    <Textfield
-                                      name="email"
-                                      label="Email Address"
-                                      disabled={
-                                        errors?.companyUEN ||
-                                        errors?.companyName ||
-                                        !companyName ||
-                                        !companyUEN
-                                      }
-                                      helperText="The report will be delivered on this email address"
-                                    />
-                                  </Grid>
-
-                                  <Grid item xs={12} md={6}>
-                                    <Textfield
-                                      name="repeatEmail"
-                                      label="Re-enter Email Address"
-                                      disabled={
-                                        errors?.companyUEN ||
-                                        errors?.companyName ||
-                                        !companyName ||
-                                        !companyUEN
-                                      }
-                                    />
-                                  </Grid>
-
-                                  <Grid item xs={12} md={6}>
-                                    <Textfield
-                                      name="phone"
-                                      label="Mobile Number"
-                                      InputProps={{
-                                        startAdornment: (
-                                          <InputAdornment position="start">
-                                            +65
-                                          </InputAdornment>
-                                        ),
-                                      }}
-                                      disabled={
-                                        errors?.companyUEN ||
-                                        errors?.companyName ||
-                                        !companyName ||
-                                        !companyUEN
-                                      }
-                                    />
-                                  </Grid>
-                                </Grid>
-                              </Box>
+                              <Step2 errors={errors} values={values} />
                             ) : step.level === 2 ? (
-                              <Box sx={{ mb: 3, mt: 3 }}>
-                                <Stack
-                                  direction={{ xs: "column", md: "row" }}
-                                  spacing={{ xs: 1, sm: 2, md: 4 }}
-                                  sx={{ width: "100%" }}
-                                >
-                                  <Stack
-                                    direction={"column"}
-                                    spacing={1}
-                                    justifyContent="flex-start"
-                                    alignItems={"center"}
-                                    sx={{
-                                      padding: " 40px 24px",
-                                      borderRadius: "4px",
-                                      border: "1px dashed rgba(0, 0, 0, 0.118)",
-                                      backgroundColor: "rgb(250, 250, 250)",
-                                      color: "rgb(189, 189, 189)",
-                                      pointerEvents: "none",
-                                      width: "50%",
-                                      height: "fit-content",
-                                    }}
-                                  >
-                                    <Avatar
-                                      sx={{
-                                        backgroundColor: "rgba(0, 0, 84, 0.12)",
-                                        p: "3px",
-                                      }}
-                                    >
-                                      <PictureAsPdfIcon
-                                        size="small"
-                                        sx={{
-                                          color: "rgb(189, 189, 189)",
-                                        }}
-                                      />
-                                    </Avatar>
-                                    <Typography
-                                      component={"p"}
-                                      variant="subtitle1"
-                                      align="start"
-                                      gutterBottom
-                                    >
-                                      <span
-                                        style={{
-                                          borderBottom:
-                                            "1px solid rgb(189, 189, 189)",
-                                        }}
-                                      >
-                                        Click to upload
-                                      </span>
-                                      &nbsp; or drag and drop Bank Statements
-                                    </Typography>
-                                  </Stack>
-                                  <Stack
-                                    direction={"column"}
-                                    spacing={2}
-                                    justifyContent="flex-start"
-                                    alignItems={"flex-start"}
-                                    sx={{
-                                      color: "rgba(0, 0, 0, 0.6)",
-                                      width: "50%",
-                                    }}
-                                  >
-                                    <Stack direction={"row"} spacing={2}>
-                                      <DoneIcon size="large" />
-                                      <Typography
-                                        component={"p"}
-                                        variant="subtitle1"
-                                        align="start"
-                                      >
-                                        PDFs (not scanned copies) of company's
-                                        operating bank current account(s)
-                                        statements for the past 6 months.
-                                        Example: If today is 29 Nov 22, then
-                                        please upload bank statements from May
-                                        22 to Oct 22 (both months inclusive)
-                                      </Typography>
-                                    </Stack>
-                                    <Stack direction={"row"} spacing={2}>
-                                      <DoneIcon size="large" />
-                                      <Typography
-                                        component={"p"}
-                                        variant="subtitle1"
-                                        align="start"
-                                      >
-                                        If your company is multi-banked, then
-                                        please upload 6 months bank statements
-                                        for each bank account
-                                      </Typography>
-                                    </Stack>
-                                    <Stack direction={"row"} spacing={2}>
-                                      <DoneIcon size="large" />
-                                      <Typography
-                                        component={"p"}
-                                        variant="subtitle1"
-                                        align="start"
-                                      >
-                                        If your file is password protected, we
-                                        request you to remove the password and
-                                        upload the file to avoid submission
-                                        failure
-                                      </Typography>
-                                    </Stack>
-                                    <Stack direction={"row"} spacing={2}>
-                                      <DoneIcon size="large" />
-                                      <Typography
-                                        component={"p"}
-                                        variant="subtitle1"
-                                        align="start"
-                                      >
-                                        In case if you are facing any issue
-                                        while uploading bank statements, Please
-                                        contact us on&nbsp;
-                                        <Link
-                                          href="mailto:support@credilinq.ai "
-                                          underline="none"
-                                          target="_blank"
-                                          sx={{ color: "rgb(96, 26, 121)" }}
-                                        >
-                                          support@credilinq.ai
-                                        </Link>
-                                      </Typography>
-                                    </Stack>
-                                  </Stack>
-                                </Stack>
-                              </Box>
+                              <Step3
+                                isEnable={
+                                  activeStepCondition(errors, values) === 2
+                                }
+                                onChangePDF={handleSelectedPDF}
+                                selectedPDF={selectedPDF}
+                              />
                             ) : (
-                              <Box sx={{ mb: 3, mt: 3 }}>
-                                <Stack
-                                  direction={"column"}
-                                  spacing={1}
-                                  justifyContent="flex-start"
-                                  alignItems={"flex-start"}
-                                  sx={{
-                                    color: "rgba(0, 0, 0, 0.38)",
-                                  }}
-                                >
-                                  <Checkbox
-                                    name="c1"
-                                    label={
-                                      <Typography
-                                        variant="subtitle1"
-                                        align="start"
-                                      >
-                                        I confirm that I am the authorized
-                                        person to upload bank statements on
-                                        behalf of my company
-                                      </Typography>
-                                    }
-                                  />
-                                  <Checkbox
-                                    name="c2"
-                                    label={
-                                      <Typography
-                                        variant="subtitle1"
-                                        align="start"
-                                      >
-                                        I assure that uploaded bank statements
-                                        and provided company information matches
-                                        and are of same company, if there is a
-                                        mismatch then my report will not be
-                                        generated
-                                      </Typography>
-                                    }
-                                  />
-                                  <Checkbox
-                                    name="c3"
-                                    label={
-                                      <Typography
-                                        variant="subtitle1"
-                                        align="start"
-                                      >
-                                        I understand that this is a general
-                                        report based on the bank statement and
-                                        Credilinq is not providing a solution or
-                                        guiding me for my business growth
-                                      </Typography>
-                                    }
-                                  />
-                                  <Checkbox
-                                    name="termsOfService"
-                                    label={
-                                      <Typography
-                                        variant="subtitle1"
-                                        align="start"
-                                      >
-                                        I duly accept the&nbsp;
-                                        <Link
-                                          href="https://stage-smehealth.credilinq.ai/terms-and-conditions"
-                                          underline="none"
-                                          sx={{ color: "rgb(96, 26, 121)" }}
-                                          target="_blank"
-                                        >
-                                          Terms & Conditions
-                                        </Link>
-                                      </Typography>
-                                    }
-                                  />
-                                </Stack>
-                              </Box>
+                              <Step4 isEnable={selectedPDF ? true : false} />
                             )}
                           </StepContent>
                         </Step>

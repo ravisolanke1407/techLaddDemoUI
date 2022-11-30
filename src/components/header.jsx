@@ -1,28 +1,30 @@
 import { Box, Typography } from "@mui/material";
 import React from "react";
+import { makeStyles } from "@mui/styles";
 
+const useStyles = makeStyles(() => ({
+  root: {
+    backgroundImage: "url(./header-bg.jpg)",
+    backgroundSize: "cover",
+    height: 125,
+    width: "100%",
+    display: "grid",
+    placeItems: "center",
+    color: "#fff",
+  },
+  innerBox: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 24,
+    width: "80%",
+  },
+}));
 export const Header = () => {
+  const classes = useStyles();
   return (
-    <Box
-      style={{
-        backgroundImage: "url(./header-bg.jpg)",
-        backgroundSize: "cover",
-        height: 125,
-        width: "100%",
-        display: "grid",
-        placeItems: "center",
-        color: "#fff",
-        // paddingLeft: 8,
-        // paddingRight: 8,
-      }}
-    >
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 24,
-        }}
-      >
+    <Box className={classes.root}>
+      <Box className={classes.innerBox}>
         <img
           src="https://stage-smehealth.credilinq.ai/static/images/logo.svg"
           alt="logo"
